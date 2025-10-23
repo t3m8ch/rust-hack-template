@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::Router;
+use socketioxide::{SocketIo, extract::SocketRef};
 use tower_http::trace::TraceLayer;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
@@ -10,6 +11,7 @@ use crate::{config::Config, state::AppState};
 pub mod config;
 pub mod rest;
 pub mod state;
+pub mod ws;
 
 #[tokio::main]
 #[tracing::instrument]
@@ -28,9 +30,15 @@ async fn main() -> anyhow::Result<()> {
         config: Arc::new(config.clone()),
     };
 
+    let (ws_layer, ws_io) = SocketIo::new_layer();
+    ws_io.ns("/", |s: SocketRef| {
+        ws::hello(&s);
+    });
+
     let app = Router::new()
         .with_state(state)
         .nest("/hello", rest::hello_router())
+        .layer(ws_layer)
         .layer(TraceLayer::new_for_http());
 
     let addr = format!("{}:{}", config.host, config.port);
