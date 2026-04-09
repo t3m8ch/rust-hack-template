@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18.3
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - type: bind
+        source: ./db/CreateTables.sql
+        target: /docker-entrypoint-initdb.d/CreateTables.sql
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    ports:
+      - "1311:5432"
+    env_file:
+      - path: .env
+        required: false

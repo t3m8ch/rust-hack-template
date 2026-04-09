@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use socketioxide::{SocketIo, extract::SocketRef};
+use sqlx::postgres::PgPoolOptions;
 use tower_http::trace::TraceLayer;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
@@ -26,8 +27,15 @@ async fn main() -> anyhow::Result<()> {
 
     dotenvy::dotenv().ok();
     let config: Config = envy::from_env()?;
+
+    let pgpool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&config.database_url)
+        .await?;
+
     let state = AppState {
         config: Arc::new(config.clone()),
+        pgpool,
     };
 
     let (ws_layer, ws_io) = SocketIo::new_layer();
