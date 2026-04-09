@@ -1,8 +1,10 @@
 use axum::{Router, routing::get};
 
+use crate::state::AppState;
+
 // Example
 
-pub fn hello_router() -> Router {
+pub fn hello_router() -> Router<AppState> {
     Router::new().route("/", get(hello_handler))
 }
 

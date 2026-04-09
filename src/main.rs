@@ -9,7 +9,12 @@ use tracing_subscriber::EnvFilter;
 
 use crate::{config::Config, state::AppState};
 
+pub mod auth;
 pub mod config;
+pub mod db;
+pub mod dto;
+pub mod error;
+pub mod extractors;
 pub mod rest;
 pub mod state;
 pub mod ws;
@@ -44,10 +49,11 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let app = Router::new()
-        .with_state(state)
+        .nest("/auth", rest::auth_router())
         .nest("/hello", rest::hello_router())
         .layer(ws_layer)
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
 
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
