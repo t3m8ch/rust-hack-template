@@ -9,7 +9,7 @@ use axum::{
 };
 use reqwest::{Client, Url};
 use rstest::fixture;
-use rust_hack_template::{build_router, build_state, config::Config, connect_pgpool, run};
+use rust_hack_template::{build_router, build_state, config::Config, connect_migrated_pgpool, run};
 use serde_json::Value;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use testcontainers_modules::{
@@ -77,12 +77,11 @@ async fn create_test_database(postgres: &TestPostgres) -> anyhow::Result<String>
         .execute(format!(r#"CREATE DATABASE "{database_name}""#).as_str())
         .await?;
 
-    let database_url = build_database_url(&postgres.host, postgres.port, &database_name);
-    let pool = connect_pgpool(&database_url).await?;
-    sqlx::migrate!("./migrations").run(&pool).await?;
-    pool.close().await;
-
-    Ok(database_url)
+    Ok(build_database_url(
+        &postgres.host,
+        postgres.port,
+        &database_name,
+    ))
 }
 
 pub fn test_config(database_url: String) -> Config {
@@ -108,7 +107,7 @@ impl TestApp {
         let postgres = shared_postgres().await;
         let database_url = create_test_database(postgres.as_ref()).await?;
         let config = test_config(database_url.clone());
-        let pool = connect_pgpool(&database_url).await?;
+        let pool = connect_migrated_pgpool(&database_url).await?;
 
         Ok(Self {
             _postgres: postgres,

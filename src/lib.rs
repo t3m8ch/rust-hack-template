@@ -50,3 +50,13 @@ pub async fn connect_pgpool(database_url: &str) -> Result<PgPool, sqlx::Error> {
         .connect(database_url)
         .await
 }
+
+pub async fn migrate_pgpool(pgpool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    sqlx::migrate!("./migrations").run(pgpool).await
+}
+
+pub async fn connect_migrated_pgpool(database_url: &str) -> anyhow::Result<PgPool> {
+    let pgpool = connect_pgpool(database_url).await?;
+    migrate_pgpool(&pgpool).await?;
+    Ok(pgpool)
+}

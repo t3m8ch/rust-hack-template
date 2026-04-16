@@ -1,4 +1,4 @@
-use rust_hack_template::{build_router, build_state, config::Config, connect_pgpool, run};
+use rust_hack_template::{build_router, build_state, config::Config, connect_migrated_pgpool, run};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
@@ -16,7 +16,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     let config: Config = envy::from_env()?;
 
-    let pgpool = connect_pgpool(&config.database_url).await?;
+    let pgpool = connect_migrated_pgpool(&config.database_url).await?;
     let state = build_state(config.clone(), pgpool);
     let app = build_router(state);
 

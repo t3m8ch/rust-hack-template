@@ -9,20 +9,19 @@ This file is for coding agents working in this repository.
 - Reusable app assembly lives in `src/lib.rs` via `build_state(...)`, `build_router(...)`, and `run(...)`.
 - Runtime config comes from environment variables via `envy` and `.env`.
 - SQL queries use SQLx compile-time checked macros plus checked metadata in `.sqlx/`.
-- SQL schema source of truth lives in `migrations/`; `db/CreateTables.sql` is only a local compose bootstrap mirror.
+- SQL schema source of truth lives in `migrations/`.
 
 ## Repository Layout
 
 - `src/lib.rs`: reusable app bootstrap, module declarations, top-level router assembly, and server runner.
-- `src/main.rs`: thin app entrypoint that loads config, connects Postgres, binds the listener, and delegates to `src/lib.rs`.
+- `src/main.rs`: thin app entrypoint that loads config, connects Postgres, applies migrations, binds the listener, and delegates to `src/lib.rs`.
 - `src/rest/`: HTTP routers and handlers only.
 - `src/dto/`: request/response DTOs and transport-facing mapping.
 - `src/db/`: DB row structs and SQL helpers.
 - `src/auth/`: auth-specific domain helpers such as password hashing and session workflows.
 - `src/extractors/`: reusable Axum extractors such as `ValidatedJson<T>`.
 - `src/error.rs`: unified API error type and HTTP error serialization.
-- `migrations/`: authoritative SQLx schema migrations used by tests and schema evolution.
-- `db/CreateTables.sql`: local Docker bootstrap schema kept aligned with `migrations/`.
+- `migrations/`: authoritative SQLx schema migrations used by tests, local startup, and schema evolution.
 - `compose.yml`: local Postgres service.
 - `justfile`: common dev helpers.
 
@@ -36,6 +35,7 @@ This file is for coding agents working in this repository.
 - Start Postgres: `just dev`
 - Default DB URL from `.env`: `postgres://postgres:postgres@localhost:1311/postgres`
 - The app loads `.env` automatically via `dotenvy`.
+- The app applies pending SQLx migrations automatically on startup before serving requests.
 
 ## Build Commands
 
@@ -69,16 +69,15 @@ This file is for coding agents working in this repository.
 
 - This repo uses `sqlx::query!` and `sqlx::query_as!`.
 - Those macros depend on either a live `DATABASE_URL` or `.sqlx` metadata.
-- Schema changes must be made in `migrations/` first, then mirrored to `db/CreateTables.sql` if local compose bootstrap must stay current.
+- Schema changes must be made in `migrations/` first.
 - When changing SQL queries, selected columns, or schema, update `.sqlx/`.
 - Preferred flow: ensure Postgres is running, ensure live schema matches the current migrations, run `cargo check`, run `just sqlx-prepare`, then re-run `cargo check`.
 
 ## Database Notes
 
 - `migrations/` is the authoritative schema source.
-- `db/CreateTables.sql` is mounted into the local Postgres container for first-time init only.
-- If the Postgres volume already exists, editing `CreateTables.sql` alone will not update the live DB.
-- For schema changes, update the migration, apply the change to the running local DB or recreate the volume, and keep `db/CreateTables.sql` aligned.
+- Local app startup applies pending SQLx migrations automatically against the configured database.
+- For schema changes, update the migration and apply the change to the running local DB or recreate the volume if you need a fresh local environment.
 - Containerized tests create a fresh database per test and run SQLx migrations automatically; they do not require manual `docker compose up`.
 
 ## HTTP/API Conventions
@@ -160,7 +159,6 @@ This file is for coding agents working in this repository.
 ## When Changing Schema Or Auth Logic
 
 - Update `migrations/` first.
-- Mirror the schema change into `db/CreateTables.sql` if local compose bootstrap must stay current.
 - Update any manual local DB schema needed for SQLx macro checks.
 - Update SQL queries and row structs.
 - Run `cargo fmt && cargo check`.

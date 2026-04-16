@@ -6,10 +6,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-    volumes:
-      - type: bind
-        source: ./db/CreateTables.sql
-        target: /docker-entrypoint-initdb.d/CreateTables.sql
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
