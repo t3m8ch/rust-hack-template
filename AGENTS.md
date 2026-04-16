@@ -6,19 +6,23 @@ This file is for coding agents working in this repository.
 
 - Stack: Rust, Axum, Postgres, SQLx, Socketioxide.
 - App entry point: `src/main.rs`.
+- Reusable app assembly lives in `src/lib.rs` via `build_state(...)`, `build_router(...)`, and `run(...)`.
 - Runtime config comes from environment variables via `envy` and `.env`.
 - SQL queries use SQLx compile-time checked macros plus checked metadata in `.sqlx/`.
+- SQL schema source of truth lives in `migrations/`; `db/CreateTables.sql` is only a local compose bootstrap mirror.
 
 ## Repository Layout
 
-- `src/main.rs`: app startup, tracing, database pool, top-level router.
+- `src/lib.rs`: reusable app bootstrap, module declarations, top-level router assembly, and server runner.
+- `src/main.rs`: thin app entrypoint that loads config, connects Postgres, binds the listener, and delegates to `src/lib.rs`.
 - `src/rest/`: HTTP routers and handlers only.
 - `src/dto/`: request/response DTOs and transport-facing mapping.
 - `src/db/`: DB row structs and SQL helpers.
 - `src/auth/`: auth-specific domain helpers such as password hashing and session workflows.
 - `src/extractors/`: reusable Axum extractors such as `ValidatedJson<T>`.
 - `src/error.rs`: unified API error type and HTTP error serialization.
-- `db/CreateTables.sql`: bootstrap schema used by dockerized Postgres.
+- `migrations/`: authoritative SQLx schema migrations used by tests and schema evolution.
+- `db/CreateTables.sql`: local Docker bootstrap schema kept aligned with `migrations/`.
 - `compose.yml`: local Postgres service.
 - `justfile`: common dev helpers.
 
@@ -50,6 +54,9 @@ This file is for coding agents working in this repository.
 - Run a specific integration/unit test and show stdout: `cargo test <test_name> -- --nocapture`
 - Run tests in one module/file by substring match: `cargo test auth`
 - Run one exact-named test only: `cargo test <test_name> -- --exact --nocapture`
+- Run the containerized auth integration suite: `cargo test --test auth_integration -- --nocapture`
+- Run the containerized auth e2e smoke test: `cargo test --test auth_e2e -- --nocapture`
+- Optional faster local/CI runner: `cargo nextest run`
 
 ## Linting And Verification
 
@@ -62,16 +69,17 @@ This file is for coding agents working in this repository.
 
 - This repo uses `sqlx::query!` and `sqlx::query_as!`.
 - Those macros depend on either a live `DATABASE_URL` or `.sqlx` metadata.
+- Schema changes must be made in `migrations/` first, then mirrored to `db/CreateTables.sql` if local compose bootstrap must stay current.
 - When changing SQL queries, selected columns, or schema, update `.sqlx/`.
-- Preferred flow: ensure Postgres is running, ensure live schema matches code, run `cargo check`, run `just sqlx-prepare`, then re-run `cargo check`.
+- Preferred flow: ensure Postgres is running, ensure live schema matches the current migrations, run `cargo check`, run `just sqlx-prepare`, then re-run `cargo check`.
 
 ## Database Notes
 
-- Schema bootstrap is not using SQLx migrations yet.
-- `db/CreateTables.sql` is mounted into the Postgres container for first-time init.
+- `migrations/` is the authoritative schema source.
+- `db/CreateTables.sql` is mounted into the local Postgres container for first-time init only.
 - If the Postgres volume already exists, editing `CreateTables.sql` alone will not update the live DB.
-- For schema changes, apply the change manually to the running DB or recreate the volume.
-- Keep `db/CreateTables.sql` and the live local DB schema in sync before running `sqlx-prepare`.
+- For schema changes, update the migration, apply the change to the running local DB or recreate the volume, and keep `db/CreateTables.sql` aligned.
+- Containerized tests create a fresh database per test and run SQLx migrations automatically; they do not require manual `docker compose up`.
 
 ## HTTP/API Conventions
 
@@ -151,12 +159,13 @@ This file is for coding agents working in this repository.
 
 ## When Changing Schema Or Auth Logic
 
-- Update `db/CreateTables.sql`.
+- Update `migrations/` first.
+- Mirror the schema change into `db/CreateTables.sql` if local compose bootstrap must stay current.
 - Update any manual local DB schema needed for SQLx macro checks.
 - Update SQL queries and row structs.
 - Run `cargo fmt && cargo check`.
 - Run `just sqlx-prepare`.
-- Re-test the relevant endpoints with `curl` or targeted tests.
+- Re-test the relevant endpoints with `curl`, `cargo test --test auth_integration`, or targeted tests.
 
 ## Manual API Smoke Test Commands
 
@@ -171,5 +180,6 @@ This file is for coding agents working in this repository.
 - Preserve the current layered structure unless there is a clear reason to refactor it.
 - Prefer extending existing modules over introducing many tiny abstractions.
 - Keep compile-time SQL checks working.
-- If you touch SQL, assume `sqlx-prepare` is part of the change.
+- If you touch SQL, assume migrations plus `sqlx-prepare` are part of the change.
+- Prefer reusing `tests/common/` for any new real-Postgres integration/e2e coverage.
 - If you touch handlers, preserve the unified API error format.

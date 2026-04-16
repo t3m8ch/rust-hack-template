@@ -1,6 +1,3 @@
--- NOTE: Keep this file aligned with migrations/20260416094500_init_auth_schema.sql.
--- SQLx migrations are the authoritative schema source; this file remains for local compose bootstrap only.
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS users (
