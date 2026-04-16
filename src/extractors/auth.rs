@@ -1,7 +1,8 @@
+use std::future::Future;
+
 use axum::{extract::FromRequestParts, http::request::Parts};
 use axum_extra::extract::CookieJar;
 use chrono::{DateTime, Utc};
-use std::future::Future;
 use uuid::Uuid;
 
 use crate::{auth::session::find_user_by_session_token, error::AppError, state::AppState};

@@ -15,7 +15,7 @@ This file is for coding agents working in this repository.
 - `src/rest/`: HTTP routers and handlers only.
 - `src/dto/`: request/response DTOs and transport-facing mapping.
 - `src/db/`: DB row structs and SQL helpers.
-- `src/auth/`: auth-specific helpers, password hashing, sessions, extractors.
+- `src/auth/`: auth-specific domain helpers such as password hashing and session workflows.
 - `src/extractors/`: reusable Axum extractors such as `ValidatedJson<T>`.
 - `src/error.rs`: unified API error type and HTTP error serialization.
 - `db/CreateTables.sql`: bootstrap schema used by dockerized Postgres.
@@ -85,10 +85,11 @@ This file is for coding agents working in this repository.
 ## Code Organization Rules
 
 - Keep `src/rest/*.rs` focused on routing and HTTP flow.
-- Put request and response DTOs in `src/dto/`.
-- Put SQL row structs and query helpers in `src/db/`.
+- Put request and response DTOs in `src/dto/`, including feature-specific files such as `src/dto/auth.rs`.
+- Put SQL row structs and query helpers in `src/db/`, including feature-specific files such as `src/db/auth.rs`.
 - Put reusable domain helpers in feature modules such as `src/auth/`.
-- Put cross-cutting extractors in `src/extractors/`.
+- Put Axum extractors in `src/extractors/`, including feature-specific files such as `src/extractors/auth.rs`.
+- Prefer a layer-first layout for transport and persistence adapter code; do not place HTTP extractor definitions inside feature service modules by default.
 - Avoid mixing DTOs, DB structs, SQL, and handlers in one file unless the code is truly tiny.
 
 ## Formatting And Imports

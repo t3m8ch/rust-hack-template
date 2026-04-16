@@ -4,8 +4,8 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    auth::CurrentUser,
     db::auth::{UserAuthRow, UserRow},
+    extractors::CurrentUser,
 };
 
 #[derive(Debug, Deserialize, Validate)]

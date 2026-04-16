@@ -8,7 +8,6 @@ use axum_extra::extract::CookieJar;
 
 use crate::{
     auth::{
-        CurrentUser,
         password::{hash_password, verify_password},
         session::{
             build_remove_session_cookie, build_session_cookie, create_session,
@@ -18,7 +17,7 @@ use crate::{
     db::auth::{find_user_auth_by_email, insert_user},
     dto::auth::{LoginRequest, RegisterRequest, UserResponse},
     error::{AppError, AppResult},
-    extractors::ValidatedJson,
+    extractors::{CurrentUser, ValidatedJson},
     state::AppState,
 };
 
